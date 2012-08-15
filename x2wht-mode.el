@@ -4,7 +4,7 @@
 ;;;
 ;;;     Author: Ryota Wada
 ;;;    Version: 0.0.1
-;;;       Date: 2012-08-15T10:32:32+09:00.
+;;;       Date: 2012-08-15T17:23:07+09:00.
 ;;; -------------------------------------------------------------------------
 ;;; 
 ;;; Commentary:
@@ -16,8 +16,14 @@
 ;;;   
 ;;; Code:
 
+
+
+;;;
+;;; 基本
+;;; 
 (defvar x2wht-mode-syntax-table
   (let ((st (make-syntax-table)))
+    (modify-syntax-entry ?\" "\"")
     st)
   "")
 
@@ -26,10 +32,85 @@
     map)
   "")
 
-;;; 
-;;; html-mode
+(defvar x2wht-comment-char
+  nil
+  "")
+
+
 ;;;
-;; utility macro.
+;;; x2wht-font-lock-keywords
+;;; 
+(defvar x2wht-font-lock-keywords
+  `(("<\\(\\?xml\\)\\>"
+     (1 font-lock-keyword-face))
+    ("\\(<!\\[CDATA\\[\\).*\\(\\]\\]>\\)"
+     (1 font-lock-keyword-face)
+     (2 font-lock-keyword-face))
+    (,(concat  "\\(<\\)\\(!DOCTYPE\\)[ ]+"
+              "\\([a-zA-Z0-9\\-_]+\\)"
+              "\\("
+              "[ ]+\\(PUBLIC\\|SYSTEM\\)"
+              "\\("
+              "[ ]+\\(\\('[^']+'\\)\\|\\(\"[^\"]+\"\\)\\)"
+              "\\(\\([ ]+\\(\\('[^']+'\\)\\|\\(\"[^\"]+\"\\)\\)\\)\\)?"
+              "\\)?"
+              "\\)?"
+              "[ ]*\\(>\\)")
+     (1 font-lock-keyword-face)
+     (2 font-lock-keyword-face)
+     (3 my-white-face)
+     (5 font-lock-keyword-face)
+     (15 font-lock-keyword-face))
+    ;; ("<\\(!DOCTYPE\\)\\>"
+    ;;  (1 font-lock-keyword-face))
+    ;; ("\\(<\\)!DOCTYPE\\>"
+    ;;  (1 font-lock-keyword-face))
+    ;; ("<!DOCTYPE\\s-+\\(>\\)$"
+    ;;  (2 font-lock-keyword-face))
+    ("&\\w+;"
+     (0 font-lock-keyword-face))
+    ("&#\\w+;"
+     (0 font-lock-keyword-face))
+    ;; empty element
+    (,(concat "\\(<\\)\\([a-zA-Z0-9\\-]+\\)"
+              "\\("
+              "[ ]+[a-zA-Z0-9\\-]+\\(=\\)"
+              "\\([^\"'/><]\\|\"[^\"]*\"\\|'[^']*'\\)"
+              "\\)*"
+              "[ ]*\\(/\\)\\(>\\)")
+     (1 font-lock-builtin-face)
+     (2 font-lock-function-name-face)
+     (6 font-lock-builtin-face)
+     (7 font-lock-builtin-face))
+    ;; start-tag
+    (,(concat "\\(<\\)\\([a-zA-Z0-9\\-]+\\)"
+              "\\("
+              "[ ]+\\([a-zA-Z0-9\\-]+:\\)?[a-zA-Z0-9\\-]+\\(=\\)"
+              "\\([^\"'/><]\\|\"[^\"]*\"\\|'[^']*'\\)"
+              "\\)*"
+              "[ ]*\\(>\\)")
+     (1 font-lock-builtin-face)
+     (2 font-lock-function-name-face)
+     (7 font-lock-builtin-face))
+    ;; end-tag
+    ("\\(</\\)\\([a-zA-Z0-9\\-]+\\)\\(>\\)"
+     (1 font-lock-builtin-face)
+     (2 font-lock-function-name-face)
+     (3 font-lock-builtin-face))
+    ;; 屬性のマッチャ
+    ("\\([a-zA-Z0-9\\-]+\\)\\(=\\)\\(\"[^\"]*\"\\)"
+     (1 font-lock-builtin-face)
+     (2 font-lock-builtin-face)
+     (3 font-lock-string-face))
+    ;; 見出し要素の内容強調
+    ("<h[1-6]>\\(.*\\)</h[1-6]>"
+     (1 my-html-heading-face))
+    )
+  "")
+
+;;; 
+;;; utility macro.
+;;; 
 (defmacro my-define-many-skeletons (&rest table)
   (let ((result '()))
     (while (not (null table))
@@ -43,120 +124,124 @@
       (setq table (cdr table)))
     (setq result (cons 'progn result))
     result))
-;;
-(add-hook
- 'x2wht-mode-hook
- #'(lambda ()
-     ;; 基本的な函數（タグ閉ぢ等）
-     (define-key html-mode-map (kbd "C-c C-t") 'sgml-tag)
-     (define-key html-mode-map (kbd "C-c C-v") 'sgml-validate)
-     (define-key html-mode-map (kbd "C-l") 'sgml-close-tag)
-     ;; 個人的によく使ふ要素（C-cを2囘打つた後、Ctrlと併せたアルファベット）
-     (define-key html-mode-map (kbd "C-c C-c C-u") 'html-unordered-list)
-     (define-key html-mode-map (kbd "C-c C-c C-o") 'html-ordered-list)
-     (define-key html-mode-map (kbd "C-c C-c C-l") 'html-list-item)
-     (define-key html-mode-map (kbd "C-c C-c C-b") 'html-blockquote)
-     (define-key html-mode-map (kbd "C-c C-c C-p") 'html-paragraph)
-     (define-key html-mode-map (kbd "C-c C-c C-q") 'html-q)
-     (define-key html-mode-map (kbd "C-c C-c C-a") 'html-href-anchor)
-     (define-key html-mode-map (kbd "C-c C-c C-i") 'html-linked-image)
-     (define-key html-mode-map (kbd "C-c C-c C-c C-i") 'html-image)
-     (define-key html-mode-map (kbd "C-c C-c C-e") 'html-em-tag)
-     (define-key html-mode-map (kbd "C-c C-c C-s") 'html-strong-tag)
-     ;; 定義リスト要素
-     (define-key html-mode-map (kbd "C-c C-c C-d") 'html-dl)
-     (define-key html-mode-map (kbd "C-c C-9") 'html-dt)
-     (define-key html-mode-map (kbd "C-c C-0") 'html-dd)
-     ;; heading
-     (define-key html-mode-map (kbd "C-c C-1") 'html-headline-1)
-     (define-key html-mode-map (kbd "C-c C-2") 'html-headline-2)
-     (define-key html-mode-map (kbd "C-c C-3") 'html-headline-3)
-     (define-key html-mode-map (kbd "C-c C-4") 'html-headline-4)
-     (define-key html-mode-map (kbd "C-c C-5") 'html-headline-5)
-     (define-key html-mode-map (kbd "C-c C-6") 'html-headline-6)
-     ;; HTML文書の構造関係要素（C-cを2囘打つた後、單發のアルファベット）
-     (define-key html-mode-map (kbd "C-c C-c m") 'html-meta)
-     (define-key html-mode-map (kbd "C-c C-c l") 'html-link)
-     (define-key html-mode-map (kbd "C-c C-c r") 'html-html-tag)
-     (define-key html-mode-map (kbd "C-c C-c t") 'html-title-tag)
-     (define-key html-mode-map (kbd "C-c C-c h") 'html-head-tag)
-     (define-key html-mode-map (kbd "C-c C-c b") 'html-body-tag)
-     ;; コンピュータ関係要素とpre要素
-     (local-unset-key (kbd "C-c C-a"))
-     (define-key html-mode-map (kbd "C-c C-a C-p") 'html-pre-tag)
-     (define-key html-mode-map (kbd "C-c C-a C-c") 'html-code-tag)
-     (define-key html-mode-map (kbd "C-c C-a C-k") 'html-kbd-tag)
-     (define-key html-mode-map (kbd "C-c C-a C-s") 'html-samp-tag)
-     ;; ins要素とdel要素
-     (local-unset-key (kbd "C-c C-e"))
-     (define-key html-mode-map (kbd "C-c C-e C-i") 'html-ins-start-tag)
-     (define-key html-mode-map (kbd "C-c C-e C-d") 'html-del-start-tag)
-     ;; div要素とspan要素
-     (local-unset-key (kbd "C-c C-f"))
-     (define-key html-mode-map (kbd "C-c C-f C-d") 'html-div-start-tag)
-     (define-key html-mode-map (kbd "C-c C-f C-s") 'html-span-start-tag)
-     
-     ;; skeleton定義
-     (define-skeleton html-href-anchor ""
-       "href: "
-       "<a href=\"" str "\">" _ )
-     (define-skeleton html-image ""
-       "src: "
-       "<img src=\"" str "\" alt=\"\" />" _ )
-     (define-skeleton html-linked-image ""
-       "URI: "
-       "<a href=\"" str "\"><img src=\"" str "\" alt=\" \" /></a>" _ )
-     (define-skeleton html-meta ""
-       "name: "
-       "<meta name=\"" str "\" content=\"\" />" _ )
-     (define-skeleton html-link ""
-       "rel: "
-       "<link rel=\"" str "\" href=\"\" />" _ )
-     
-     (my-define-many-skeletons
-      ;; (html-image "<img src=\"\" alt=\"\" />" )
-      ;;(html-q ("<q cite=\"" str "\">" ))
-      (html-q "<q>" )
-      ;;(html-href-anchor ("<a href=\"" str "\">" ))
-      ;; (html-href-anchor "<a href=\"\">" )
-      (html-headline-6 "<h6>" )
-      (html-headline-5 "<h5>" )
-      (html-headline-4 "<h4>" )
-      (html-headline-3 "<h3>" )
-      (html-headline-2 "<h2>" )
-      (html-headline-1 "<h1>" )
-      ;;(html-blockquote ("<blockquote cite=\"" str "\">" ))
-      (html-blockquote "<blockquote>" )
-      (html-paragraph "<p>" )
-      (html-em-tag "<em>" )
-      (html-strong-tag "<strong>" )
-      (html-dd "<dd>" )
-      (html-dt "<dt>" )
-      (html-dl "<dl>" )
-      (html-list-item "<li>")
-      (html-ordered-list "<ol>")
-      (html-unordered-list "<ul>")
-      ;;(html-link ("<link rel=\"" str "\" href=\"\" />"))
-      ;; (html-link "<link rel=\"\" href=\"\" />")
-      ;;(html-meta ("<meta name=\"" str "\" content=\"\" />"))
-      ;; (html-meta "<meta name=\"\" content=\"\" />")
-      (html-doctype-xthml1.0-strict "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">")
-      (html-doctype-html4.01-strict "<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\">") ; 暫定的 空要素がXML方式な爲
-      (html-html-tag "<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"ja\" lang=\"ja\">")
-      (html-body-tag "<body>")
-      (html-head-tag "<head>")
-      (html-title-tag "<title>")
-      (html-pre-tag "<pre>")
-      (html-code-tag "<code>")
-      (html-kbd-tag "<kbd>")
-      (html-samp-tag "<samp>")
-      (html-ins-start-tag "<ins>")
-      (html-del-start-tag "<del>")
-      (html-div-start-tag "<div>")
-      (html-span-start-tag "<span>")
-      )))
-;; html-mode-hook ends here.
 
+;;;
+;;; キーバインド
+;;; 
+;; 基本的な函數（タグ閉ぢ等）
+(define-key x2wht-mode-map (kbd "C-c C-t") 'sgml-tag)
+(define-key x2wht-mode-map (kbd "C-c C-v") 'sgml-validate)
+(define-key x2wht-mode-map (kbd "C-l") 'sgml-close-tag)
+;; 個人的によく使ふ要素（C-cを2囘打つた後、Ctrlと併せたアルファベット）
+(define-key x2wht-mode-map (kbd "C-c C-c C-u") 'html-unordered-list)
+(define-key x2wht-mode-map (kbd "C-c C-c C-o") 'html-ordered-list)
+(define-key x2wht-mode-map (kbd "C-c C-c C-l") 'html-list-item)
+(define-key x2wht-mode-map (kbd "C-c C-c C-b") 'html-blockquote)
+(define-key x2wht-mode-map (kbd "C-c C-c C-p") 'html-paragraph)
+(define-key x2wht-mode-map (kbd "C-c C-c C-q") 'html-q)
+(define-key x2wht-mode-map (kbd "C-c C-c C-a") 'html-href-anchor)
+(define-key x2wht-mode-map (kbd "C-c C-c C-i") 'html-linked-image)
+(define-key x2wht-mode-map (kbd "C-c C-c C-c C-i") 'html-image)
+(define-key x2wht-mode-map (kbd "C-c C-c C-e") 'html-em-tag)
+(define-key x2wht-mode-map (kbd "C-c C-c C-s") 'html-strong-tag)
+;; 定義リスト要素
+(define-key x2wht-mode-map (kbd "C-c C-c C-d") 'html-dl)
+(define-key x2wht-mode-map (kbd "C-c C-9") 'html-dt)
+(define-key x2wht-mode-map (kbd "C-c C-0") 'html-dd)
+;; heading
+(define-key x2wht-mode-map (kbd "C-c C-1") 'html-headline-1)
+(define-key x2wht-mode-map (kbd "C-c C-2") 'html-headline-2)
+(define-key x2wht-mode-map (kbd "C-c C-3") 'html-headline-3)
+(define-key x2wht-mode-map (kbd "C-c C-4") 'html-headline-4)
+(define-key x2wht-mode-map (kbd "C-c C-5") 'html-headline-5)
+(define-key x2wht-mode-map (kbd "C-c C-6") 'html-headline-6)
+;; HTML文書の構造関係要素（C-cを2囘打つた後、單發のアルファベット）
+(define-key x2wht-mode-map (kbd "C-c C-c m") 'html-meta)
+(define-key x2wht-mode-map (kbd "C-c C-c l") 'html-link)
+(define-key x2wht-mode-map (kbd "C-c C-c r") 'html-html-tag)
+(define-key x2wht-mode-map (kbd "C-c C-c t") 'html-title-tag)
+(define-key x2wht-mode-map (kbd "C-c C-c h") 'html-head-tag)
+(define-key x2wht-mode-map (kbd "C-c C-c b") 'html-body-tag)
+;; コンピュータ関係要素とpre要素
+(local-unset-key (kbd "C-c C-a"))
+(define-key x2wht-mode-map (kbd "C-c C-a C-p") 'html-pre-tag)
+(define-key x2wht-mode-map (kbd "C-c C-a C-c") 'html-code-tag)
+(define-key x2wht-mode-map (kbd "C-c C-a C-k") 'html-kbd-tag)
+(define-key x2wht-mode-map (kbd "C-c C-a C-s") 'html-samp-tag)
+;; ins要素とdel要素
+(local-unset-key (kbd "C-c C-e"))
+(define-key x2wht-mode-map (kbd "C-c C-e C-i") 'html-ins-start-tag)
+(define-key x2wht-mode-map (kbd "C-c C-e C-d") 'html-del-start-tag)
+;; div要素とspan要素
+(local-unset-key (kbd "C-c C-f"))
+(define-key x2wht-mode-map (kbd "C-c C-f C-d") 'html-div-start-tag)
+(define-key x2wht-mode-map (kbd "C-c C-f C-s") 'html-span-start-tag)
+
+;;; 
+;;; skeleton定義
+;;; 
+(define-skeleton html-href-anchor ""
+  "href: "
+  "<a href=\"" str "\">" _ )
+(define-skeleton html-image ""
+  "src: "
+  "<img src=\"" str "\" alt=\"\" />" _ )
+(define-skeleton html-linked-image ""
+  "URI: "
+  "<a href=\"" str "\"><img src=\"" str "\" alt=\" \" /></a>" _ )
+(define-skeleton html-meta ""
+  "name: "
+  "<meta name=\"" str "\" content=\"\" />" _ )
+(define-skeleton html-link ""
+  "rel: "
+  "<link rel=\"" str "\" href=\"\" />" _ )
+
+(my-define-many-skeletons
+ ;; (html-image "<img src=\"\" alt=\"\" />" )
+ ;;(html-q ("<q cite=\"" str "\">" ))
+ (html-q "<q>" )
+ ;;(html-href-anchor ("<a href=\"" str "\">" ))
+ ;; (html-href-anchor "<a href=\"\">" )
+ (html-headline-6 "<h6>" )
+ (html-headline-5 "<h5>" )
+ (html-headline-4 "<h4>" )
+ (html-headline-3 "<h3>" )
+ (html-headline-2 "<h2>" )
+ (html-headline-1 "<h1>" )
+ ;;(html-blockquote ("<blockquote cite=\"" str "\">" ))
+ (html-blockquote "<blockquote>" )
+ (html-paragraph "<p>" )
+ (html-em-tag "<em>" )
+ (html-strong-tag "<strong>" )
+ (html-dd "<dd>" )
+ (html-dt "<dt>" )
+ (html-dl "<dl>" )
+ (html-list-item "<li>")
+ (html-ordered-list "<ol>")
+ (html-unordered-list "<ul>")
+ ;;(html-link ("<link rel=\"" str "\" href=\"\" />"))
+ ;; (html-link "<link rel=\"\" href=\"\" />")
+ ;;(html-meta ("<meta name=\"" str "\" content=\"\" />"))
+ ;; (html-meta "<meta name=\"\" content=\"\" />")
+ (html-doctype-xthml1.0-strict "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">")
+ (html-doctype-html4.01-strict "<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\">") ; 暫定的 空要素がXML方式な爲
+ (html-html-tag "<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"ja\" lang=\"ja\">")
+ (html-body-tag "<body>")
+ (html-head-tag "<head>")
+ (html-title-tag "<title>")
+ (html-pre-tag "<pre>")
+ (html-code-tag "<code>")
+ (html-kbd-tag "<kbd>")
+ (html-samp-tag "<samp>")
+ (html-ins-start-tag "<ins>")
+ (html-del-start-tag "<del>")
+ (html-div-start-tag "<div>")
+ (html-span-start-tag "<span>")
+ )
+
+;;;
+;;; いろいろ
+;;; 
 (setq html-tag-face-alist '())
 (setq html-quick-keys t)
 (setq html-tag-alist
@@ -212,7 +297,7 @@
 ;;; 
 ;;;     cf.) http://xahlee.org/emacs/emacs_html.html
 (defun html-replace-chars-region (start end)
-  "Replace ``<'' to ``&lt;'' and other chars in HTML. This works on the current region."
+  "Replace ``<'' to ``&lt;'' and other chars in HTML. This works on the current region." ;
   (interactive "r")
   (save-restriction
     (narrow-to-region start end)
@@ -228,10 +313,10 @@
 ;;;
 ;;; html-mode's font-lock-keywords
 ;;;
-(defface my-html-heading-face
-  '((t (:foreground "black" :background "salmon")))
-  "The face used for HTML document's headings.")
-(defvar my-html-heading-face 'my-html-heading-face)
+                       (defface my-html-heading-face
+                         '((t (:foreground "black" :background "salmon")))
+                         "The face used for HTML document's headings.")
+                       (defvar my-html-heading-face 'my-html-heading-face)
 
 ;; (font-lock-add-keywords
 ;;  'html-mode
@@ -267,50 +352,18 @@
 ;;     (1 my-html-heading-face))
 ;;    ))
 
-(defvar x2wht-font-lock-keywords
-  `(;; ("<[^!][^<>]*\\(>\\)"
-    ;;  (1 font-lock-builtin-face))
-    ;; ("<![^<>]*\\(>\\)"
-    ;;  (1 font-lock-keyword-face))
-    ("\\sw+="
-     (0 font-lock-builtin-face))
-    ("<\\(\\?xml\\)\\>"
-     (1 font-lock-keyword-face))
-    ("<\\(!\\[CDATA\\[\\)"
-     (1 font-lock-keyword-face))
-    ("\\(\\]\\]\\)>"
-     (1 font-lock-keyword-face))
-    ("<!DOCTYPE\\s-+\\(\\sw+\\)"
-     (1 my-white-face))
-    ("<!DOCTYPE\\s-+\\sw+\\s-+\\(PUBLIC\\|SYSTEM\\)"
-     (1 font-lock-keyword-face))
-    ("<\\(!DOCTYPE\\)\\>"
-     (1 font-lock-keyword-face))
-    ("\\(<\\)!DOCTYPE\\>"
-     (1 font-lock-keyword-face))
-    ("<!DOCTYPE\\s-+\\(>\\)$"
-     (2 font-lock-keyword-face))
-    ("&\\w+;"
-     (0 font-lock-keyword-face))
-    ("&#\\w+;"
-     (0 font-lock-keyword-face))
-    ("\\(<\\)\\([a-zA-Z\\-]+\\)\\(>\\)"
-     (1 font-lock-builtin-face)
-     (2 font-lock-function-name-face)
-     (3 font-lock-builtin-face))
-    ("\\(</\\)\\([a-zA-Z\\-]+\\)\\(>\\)"
-     (1 font-lock-builtin-face)
-     (2 font-lock-function-name-face)
-     (3 font-lock-builtin-face))
-    )
-  "")
-
+;;;
+;;; abbrev-table
+;;; 
 ;; (defvar asm-mode-abbrev-table nil
 ;;   "Abbrev table used while in Asm mode.")
 ;; (define-abbrev-table 'asm-mode-abbrev-table ())
 
+;;; 
+;;; メイン函數
+;;; 
 ;;;###autoload
-(define-derived-mode x2wht-mode html-mode "X2WHT"
+(define-derived-mode x2wht-mode text-mode "X2WHT"
   ""
   ;; (setq local-abbrev-table asm-mode-abbrev-table)
   (set (make-local-variable 'font-lock-defaults) '(x2wht-font-lock-keywords))
@@ -324,7 +377,7 @@
   ;;(use-local-map (nconc (make-sparse-keymap) x2wht-mode-map))
   ;;(local-set-key (vector x2wht-comment-char) 'x2wht-comment)
   (set-syntax-table (make-syntax-table x2wht-mode-syntax-table))
-  (modify-syntax-entry	x2wht-comment-char "< b")
+  (modify-syntax-entry x2wht-comment-char "< b")
 
   (set (make-local-variable 'comment-start) (string x2wht-comment-char))
   (set (make-local-variable 'comment-add) 1)
