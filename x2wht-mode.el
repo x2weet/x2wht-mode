@@ -4,7 +4,7 @@
 ;;;
 ;;;     Author: Ryota Wada
 ;;;    Version: 0.0.1
-;;;       Date: 2012-08-15T17:23:07+09:00.
+;;;       Date: 2012-08-16T14:29:13+09:00.
 ;;; -------------------------------------------------------------------------
 ;;; 
 ;;; Commentary:
@@ -24,18 +24,28 @@
 (defvar x2wht-mode-syntax-table
   (let ((st (make-syntax-table)))
     (modify-syntax-entry ?\" "\"")
+    (modify-syntax-entry ?< "(>")
+    (modify-syntax-entry ?> ")<")
+    ;; (modify-syntax-entry ? "")
+    ;; (modify-syntax-entry ? "")
+    ;; (modify-syntax-entry ? "")
+    ;; (modify-syntax-entry ? "")
+    ;; (modify-syntax-entry ? "")
+    ;; (modify-syntax-entry ? "")
+    ;; (modify-syntax-entry ? "")
     st)
   "")
 
 (defvar x2wht-mode-map
   (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-d") 'x2wht-electric-delete)
+    (define-key map (kbd "C-h") 'x2wht-electric-delete-backward)
     map)
   "")
 
 (defvar x2wht-comment-char
-  nil
+  ?\\
   "")
-
 
 ;;;
 ;;; x2wht-font-lock-keywords
@@ -293,24 +303,6 @@
     ("var")))
 
 ;;;
-;;; html-replace-chars-region
-;;; 
-;;;     cf.) http://xahlee.org/emacs/emacs_html.html
-(defun html-replace-chars-region (start end)
-  "Replace ``<'' to ``&lt;'' and other chars in HTML. This works on the current region." ;
-  (interactive "r")
-  (save-restriction
-    (narrow-to-region start end)
-    (goto-char (point-min))
-    (while (search-forward "&" nil t) (replace-match "&amp;" nil t))
-    (goto-char (point-min))
-    (while (search-forward "<" nil t) (replace-match "&lt;" nil t))
-    (goto-char (point-min))
-    (while (search-forward ">" nil t) (replace-match "&gt;" nil t))
-    (goto-char (point-min))
-    (while (search-forward "\"" nil t) (replace-match "&quot;" nil t))))
-
-;;;
 ;;; html-mode's font-lock-keywords
 ;;;
                        (defface my-html-heading-face
@@ -363,7 +355,7 @@
 ;;; メイン函數
 ;;; 
 ;;;###autoload
-(define-derived-mode x2wht-mode text-mode "X2WHT"
+(define-derived-mode x2wht-mode html-mode "X2WHT"
   ""
   ;; (setq local-abbrev-table asm-mode-abbrev-table)
   (set (make-local-variable 'font-lock-defaults) '(x2wht-font-lock-keywords))
@@ -387,6 +379,34 @@
   (set (make-local-variable 'comment-end) "")
   (setq fill-prefix "\t"))
 
+;;;
+;;; html-replace-chars-region
+;;; 
+;;;     cf.) http://xahlee.org/emacs/emacs_html.html
+(defun html-replace-chars-region (start end)
+  "Replace ``<'' to ``&lt;'' and other chars in HTML. This works on the current region." ;
+  (interactive "r")
+  (save-restriction
+    (narrow-to-region start end)
+    (goto-char (point-min))
+    (while (search-forward "&" nil t) (replace-match "&amp;" nil t))
+    (goto-char (point-min))
+    (while (search-forward "<" nil t) (replace-match "&lt;" nil t))
+    (goto-char (point-min))
+    (while (search-forward ">" nil t) (replace-match "&gt;" nil t))
+    (goto-char (point-min))
+    (while (search-forward "\"" nil t) (replace-match "&quot;" nil t))))
+
+;;;
+;;; delete關係
+;;;
+(defun x2wht-electric-delete ()
+  ""
+  (interactive)
+  )
+;;;
+;;; 
+;;; 
 (provide 'x2wht-mode)
 
 ;;; x2wht-mode.el ends here
